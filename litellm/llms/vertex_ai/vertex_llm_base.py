@@ -150,6 +150,16 @@ class VertexBase:
             return True
         if "CachedContent" in optional_params:
             return True
+        if "thinkingConfig" in optional_params:
+            if "includeThoughts" in optional_params["thinkingConfig"]:
+                return True
+            if "include_thoughts" in optional_params["thinkingConfig"]:
+                return True
+        if "thinking_config" in optional_params:
+            if "includeThoughts" in optional_params["thinking_config"]:
+                return True
+            if "include_thoughts" in optional_params["thinking_config"]:
+                return True
         return False
 
     def _check_custom_proxy(
