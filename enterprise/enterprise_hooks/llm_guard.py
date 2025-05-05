@@ -7,22 +7,15 @@
 #  Thank you users! We ❤️ you! - Krrish & Ishaan
 ## This provides an LLM Guard Integration for content moderation on the proxy
 
-from typing import Optional, Literal, Union
-import litellm, traceback, sys, uuid, os
-from litellm.caching import DualCache
+from typing import Optional, Literal
+import litellm
 from litellm.proxy._types import UserAPIKeyAuth
 from litellm.integrations.custom_logger import CustomLogger
 from fastapi import HTTPException
 from litellm._logging import verbose_proxy_logger
-from litellm.utils import (
-    ModelResponse,
-    EmbeddingResponse,
-    ImageResponse,
-    StreamingChoices,
-)
-from datetime import datetime
-import aiohttp, asyncio
+import aiohttp
 from litellm.utils import get_formatted_prompt
+from litellm.secret_managers.main import get_secret_str
 
 litellm.set_verbose = True
 
@@ -36,9 +29,9 @@ class _ENTERPRISE_LLMGuard(CustomLogger):
     ):
         self.mock_redacted_text = mock_redacted_text
         self.llm_guard_mode = litellm.llm_guard_mode
-        if mock_testing == True:  # for testing purposes only
+        if mock_testing is True:  # for testing purposes only
             return
-        self.llm_guard_api_base = litellm.get_secret("LLM_GUARD_API_BASE", None)
+        self.llm_guard_api_base = get_secret_str("LLM_GUARD_API_BASE", None)
         if self.llm_guard_api_base is None:
             raise Exception("Missing `LLM_GUARD_API_BASE` from environment")
         elif not self.llm_guard_api_base.endswith("/"):
@@ -49,7 +42,7 @@ class _ENTERPRISE_LLMGuard(CustomLogger):
             verbose_proxy_logger.debug(print_statement)
             if litellm.set_verbose:
                 print(print_statement)  # noqa
-        except:
+        except Exception:
             pass
 
     async def moderation_check(self, text: str):
@@ -76,7 +69,7 @@ class _ENTERPRISE_LLMGuard(CustomLogger):
                 if redacted_text is not None:
                     if (
                         redacted_text.get("is_valid", None) is not None
-                        and redacted_text["is_valid"] != True
+                        and redacted_text["is_valid"] is False
                     ):
                         raise HTTPException(
                             status_code=400,
@@ -92,7 +85,11 @@ class _ENTERPRISE_LLMGuard(CustomLogger):
                         },
                     )
         except Exception as e:
-            traceback.print_exc()
+            verbose_proxy_logger.exception(
+                "litellm.enterprise.enterprise_hooks.llm_guard::moderation_check - Exception occurred - {}".format(
+                    str(e)
+                )
+            )
             raise e
 
     def should_proceed(self, user_api_key_dict: UserAPIKeyAuth, data: dict) -> bool:
@@ -103,7 +100,7 @@ class _ENTERPRISE_LLMGuard(CustomLogger):
             )
             if (
                 user_api_key_dict.permissions.get("enable_llm_guard_check", False)
-                == True
+                is True
             ):
                 return True
         elif self.llm_guard_mode == "all":
@@ -114,7 +111,7 @@ class _ENTERPRISE_LLMGuard(CustomLogger):
             permissions = metadata.get("permissions", {})
             if (
                 "enable_llm_guard_check" in permissions
-                and permissions["enable_llm_guard_check"] == True
+                and permissions["enable_llm_guard_check"] is True
             ):
                 return True
         return False
@@ -123,7 +120,14 @@ class _ENTERPRISE_LLMGuard(CustomLogger):
         self,
         data: dict,
         user_api_key_dict: UserAPIKeyAuth,
-        call_type: Literal["completion", "embeddings", "image_generation"],
+        call_type: Literal[
+            "completion",
+            "embeddings",
+            "image_generation",
+            "moderation",
+            "audio_transcription",
+            "responses",
+        ],
     ):
         """
         - Calls the LLM Guard Endpoint
@@ -136,7 +140,7 @@ class _ENTERPRISE_LLMGuard(CustomLogger):
         )
 
         _proceed = self.should_proceed(user_api_key_dict=user_api_key_dict, data=data)
-        if _proceed == False:
+        if _proceed is False:
             return
 
         self.print_verbose("Makes LLM Guard Check")
@@ -148,7 +152,7 @@ class _ENTERPRISE_LLMGuard(CustomLogger):
                 "moderation",
                 "audio_transcription",
             ]
-        except Exception as e:
+        except Exception:
             self.print_verbose(
                 f"Call Type - {call_type}, not in accepted list - ['completion','embeddings','image_generation','moderation','audio_transcription']"
             )

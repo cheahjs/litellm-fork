@@ -1,4 +1,13 @@
-# Greenscale Tutorial
+# Greenscale - Track LLM Spend and Responsible Usage
+
+
+:::tip
+
+This is community maintained, Please make an issue if you run into a bug
+https://github.com/BerriAI/litellm
+
+:::
+
 
 [Greenscale](https://greenscale.ai/) is a production monitoring platform for your LLM-powered app that provides you granular key insights into your GenAI spending and responsible usage. Greenscale only captures metadata to minimize the exposure risk of personally identifiable information (PII).
 
@@ -44,7 +53,7 @@ response = completion(
 
 ## Additional information in metadata
 
-You can send any additional information to Greenscale by using the `metadata` field in completion and `greenscale_` prefix. This can be useful for sending metadata about the request, such as the project and application name, customer_id, enviornment, or any other information you want to track usage. `greenscale_project` and `greenscale_application` are required fields.
+You can send any additional information to Greenscale by using the `metadata` field in completion and `greenscale_` prefix. This can be useful for sending metadata about the request, such as the project and application name, customer_id, environment, or any other information you want to track usage. `greenscale_project` and `greenscale_application` are required fields.
 
 ```python
 #openai call with additional metadata

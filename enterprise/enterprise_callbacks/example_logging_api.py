@@ -7,21 +7,17 @@ app = FastAPI()
 @app.post("/log-event")
 async def log_event(request: Request):
     try:
-        print("Received /log-event request")
+        print("Received /log-event request") # noqa
         # Assuming the incoming request has JSON data
         data = await request.json()
-        print("Received request data:")
-        print(data)
+        print("Received request data:") # noqa
+        print(data) # noqa
 
         # Your additional logic can go here
         # For now, just printing the received data
 
         return {"message": "Request received successfully"}
-    except Exception as e:
-        print(f"Error processing request: {str(e)}")
-        import traceback
-
-        traceback.print_exc()
+    except Exception:
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
