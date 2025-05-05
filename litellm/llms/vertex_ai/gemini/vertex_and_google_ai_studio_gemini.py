@@ -1547,6 +1547,7 @@ class ModelResponseIterator:
             processed_chunk = GenerateContentResponseBody(**chunk)  # type: ignore
 
             text = ""
+            reasoning_content: Optional[str] = None
             tool_use: Optional[ChatCompletionToolCallChunk] = None
             finish_reason = ""
             usage: Optional[ChatCompletionUsageBlock] = None
@@ -1561,7 +1562,10 @@ class ModelResponseIterator:
                 and "parts" in gemini_chunk["content"]
             ):
                 if "text" in gemini_chunk["content"]["parts"][0]:
-                    text = gemini_chunk["content"]["parts"][0]["text"]
+                    if "thought" in gemini_chunk["content"]["parts"][0] and gemini_chunk["content"]["parts"][0]["thought"]:
+                        reasoning_content = gemini_chunk["content"]["parts"][0]["text"]
+                    else:
+                        text = gemini_chunk["content"]["parts"][0]["text"]
                 elif "functionCall" in gemini_chunk["content"]["parts"][0]:
                     function_call = ChatCompletionToolCallFunctionChunk(
                         name=gemini_chunk["content"]["parts"][0]["functionCall"][
@@ -1586,17 +1590,7 @@ class ModelResponseIterator:
                 ## GEMINI SETS FINISHREASON ON EVERY CHUNK!
 
             if "usageMetadata" in processed_chunk:
-                usage = ChatCompletionUsageBlock(
-                    prompt_tokens=processed_chunk["usageMetadata"].get(
-                        "promptTokenCount", 0
-                    ),
-                    completion_tokens=processed_chunk["usageMetadata"].get(
-                        "candidatesTokenCount", 0
-                    ),
-                    total_tokens=processed_chunk["usageMetadata"].get(
-                        "totalTokenCount", 0
-                    ),
-                )
+                usage = ChatCompletionUsageBlock(**VertexGeminiConfig()._calculate_usage(processed_chunk).model_dump())
 
             returned_chunk = GenericStreamingChunk(
                 text=text,
@@ -1604,6 +1598,7 @@ class ModelResponseIterator:
                 is_finished=False,
                 finish_reason=finish_reason,
                 usage=usage,
+                reasoning_content=reasoning_content,
                 index=0,
             )
             return returned_chunk
